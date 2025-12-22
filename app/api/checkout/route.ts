@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession } from '@/lib/stripe';
+import { createCheckoutSession, isStripeConfigured } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { error: 'Payment processing is not configured. Please contact support.' },
+        { status: 503 }
+      );
+    }
+
     const { priceId, planType } = await request.json();
 
     if (!priceId) {

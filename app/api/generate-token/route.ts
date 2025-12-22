@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateLicenseToken } from '@/lib/stripe';
-import Stripe from 'stripe';
+import { generateLicenseToken, isStripeConfigured, getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
-
 export async function POST(request: NextRequest) {
   try {
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { error: 'Payment processing is not configured. Please contact support.' },
+        { status: 503 }
+      );
+    }
+
+    const stripe = getStripe();
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Stripe is not available' },
+        { status: 503 }
+      );
+    }
+
     const { sessionId } = await request.json();
 
     if (!sessionId) {

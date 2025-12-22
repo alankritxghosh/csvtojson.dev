@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [token, setToken] = useState<string | null>(null);
@@ -118,7 +118,7 @@ export default function SuccessPage() {
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-left">
-            <h3 className="font-semibold text-blue-900 mb-2">What's Next?</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">What&apos;s Next?</h3>
             <ul className="text-sm text-blue-800 space-y-2">
               <li>• Your license token is automatically saved in your browser</li>
               <li>• You can now convert larger CSV files (up to 50MB, 1M rows)</li>
@@ -136,6 +136,18 @@ export default function SuccessPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
 

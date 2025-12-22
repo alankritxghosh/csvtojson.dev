@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleStripeWebhook } from '@/lib/stripe';
+import { handleStripeWebhook, isStripeConfigured } from '@/lib/stripe';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: 'Stripe webhooks are not configured' },
+      { status: 503 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 

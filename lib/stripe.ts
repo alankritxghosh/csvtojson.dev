@@ -2,19 +2,23 @@ import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
 import { LicenseToken } from '@/types';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+// Make Stripe optional - only initialize if credentials are available
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    })
+  : null;
+
+// LICENSE_SECRET is required for token verification/generation
+// Use a default for development if not set (not secure for production)
+const LICENSE_SECRET = process.env.LICENSE_SECRET || 'dev-secret-key-change-in-production';
+
+/**
+ * Check if Stripe is configured
+ */
+export function isStripeConfigured(): boolean {
+  return stripe !== null && !!process.env.STRIPE_SECRET_KEY;
 }
-
-if (!process.env.LICENSE_SECRET) {
-  throw new Error('LICENSE_SECRET is not set');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
-
-const LICENSE_SECRET = process.env.LICENSE_SECRET;
 
 /**
  * Create a Stripe Checkout session
@@ -24,6 +28,10 @@ export async function createCheckoutSession(
   successUrl: string,
   cancelUrl: string
 ): Promise<Stripe.Checkout.Session> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
@@ -90,6 +98,10 @@ export async function handleStripeWebhook(
   payload: string | Buffer,
   signature: string
 ): Promise<Stripe.Event> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   
   if (!webhookSecret) {
@@ -98,5 +110,12 @@ export async function handleStripeWebhook(
 
   const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   return event;
+}
+
+/**
+ * Get Stripe instance (for direct access if needed)
+ */
+export function getStripe(): Stripe | null {
+  return stripe;
 }
 

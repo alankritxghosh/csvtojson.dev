@@ -295,7 +295,7 @@ Jane Smith,25,jane@example.com,false`}
             <div>
               <h4 className="font-semibold text-gray-900 mb-2">Can I convert CSV with headers?</h4>
               <p className="text-gray-700">
-                Yes. You can toggle the "Header row" option to use the first row of your CSV as JSON object keys. 
+                Yes. You can toggle the &quot;Header row&quot; option to use the first row of your CSV as JSON object keys. 
                 If disabled, columns will be named column_1, column_2, etc.
               </p>
             </div>
