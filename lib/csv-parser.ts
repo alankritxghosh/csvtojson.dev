@@ -143,7 +143,7 @@ export async function parseCSV(
             rowCount,
           });
         },
-        error: (error) => {
+        error: (error: Error) => {
           clearTimeout(timeoutId);
           // Sanitize error message to avoid exposing internal details
           const sanitizedMessage = error.message || 'Invalid CSV format';
