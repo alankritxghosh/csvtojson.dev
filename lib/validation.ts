@@ -53,41 +53,27 @@ export function validateFileType(file: File): void {
  * This is a best-effort check before full parsing
  */
 export async function peekColumnCount(file: File, maxColumns: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    const chunkSize = 1024; // Read first 1KB
+  try {
+    // Use File.text() which works in Node.js runtime
+    const blob = file.slice(0, 1024); // Read first 1KB
+    const text = await blob.text();
+    const firstLine = text.split('\n')[0];
+    const columnCount = firstLine.split(',').length;
 
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const firstLine = text.split('\n')[0];
-        const columnCount = firstLine.split(',').length;
-
-        if (columnCount > maxColumns) {
-          reject(
-            new ValidationError(
-              `CSV has ${columnCount} columns, maximum allowed is ${maxColumns}`,
-              'COLUMN_LIMIT_EXCEEDED'
-            )
-          );
-          return;
-        }
-
-        resolve();
-      } catch (error) {
-        // If peek fails, let the parser handle it
-        resolve();
-      }
-    };
-
-    reader.onerror = () => {
-      // If peek fails, let the parser handle it
-      resolve();
-    };
-
-    const blob = file.slice(0, chunkSize);
-    reader.readAsText(blob);
-  });
+    if (columnCount > maxColumns) {
+      throw new ValidationError(
+        `CSV has ${columnCount} columns, maximum allowed is ${maxColumns}`,
+        'COLUMN_LIMIT_EXCEEDED'
+      );
+    }
+  } catch (error) {
+    // If it's already a ValidationError, re-throw it
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    // If peek fails for any other reason, let the parser handle it
+    // (silently resolve - don't block validation)
+  }
 }
 
 /**
