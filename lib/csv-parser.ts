@@ -35,9 +35,13 @@ export class TimeoutExceededError extends Error {
 /**
  * Parse CSV with row counting during parsing and early abort on limits
  * CRITICAL: Row counting happens DURING parsing, not after
+ * 
+ * @param csvText - Raw CSV string (File must be converted to text before calling this)
+ * @param options - Conversion options (header handling, type inference, etc.)
+ * @param limits - Processing limits (rows, columns, timeout)
  */
 export async function parseCSV(
-  file: File | string,
+  csvText: string,
   options: ConversionOptions,
   limits: Limits
 ): Promise<ParseResult> {
@@ -49,7 +53,8 @@ export async function parseCSV(
     let maxColumnsSeen = 0;
     let parserInstance: any = null;
 
-    // Set up timeout guard
+    // Set up timeout guard - starts AFTER file is loaded (file is already a string)
+    // Timeout measures parsing time, not file loading time
     const timeoutId = setTimeout(() => {
       if (parserInstance) {
         parserInstance.abort();
@@ -58,7 +63,8 @@ export async function parseCSV(
     }, limits.processingTimeout);
 
     try {
-      Papa.parse(file, {
+      // PapaParse receives raw CSV string - works correctly in Node.js runtime
+      Papa.parse(csvText, {
         header: false,
         skipEmptyLines: true,
         worker: false, // Run in main thread for better control

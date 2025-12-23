@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleStripeWebhook, isStripeConfigured } from '@/lib/stripe';
-import Stripe from 'stripe';
+// STRIPE WEBHOOKS DISABLED - Replaced with LemonSqueezy
+// import { handleStripeWebhook, isStripeConfigured } from '@/lib/stripe';
+// import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // Stripe webhooks are disabled - using LemonSqueezy instead
+  return NextResponse.json(
+    { error: 'Stripe webhooks are disabled. LemonSqueezy handles webhooks directly.' },
+    { status: 503 }
+  );
+
+  /* STRIPE WEBHOOK CODE COMMENTED OUT - Keeping for reference
   if (!isStripeConfigured()) {
     return NextResponse.json(
       { error: 'Stripe webhooks are not configured' },
@@ -54,5 +62,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  */
 }
 

@@ -3,57 +3,36 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const isStripeConfigured = () => {
-  return !!(
-    typeof window !== 'undefined' &&
-    (process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID)
-  );
+const getLemonSqueezyCheckoutUrl = (planType: 'annual' | 'monthly'): string | null => {
+  if (typeof window === 'undefined') return null;
+  
+  if (planType === 'annual') {
+    return process.env.NEXT_PUBLIC_LEMONSQUEEZY_ANNUAL_CHECKOUT_URL || null;
+  } else {
+    return process.env.NEXT_PUBLIC_LEMONSQUEEZY_MONTHLY_CHECKOUT_URL || null;
+  }
 };
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const stripeConfigured = isStripeConfigured();
 
-  const handleCheckout = async (priceId: string) => {
+  const handleCheckout = (planType: 'annual' | 'monthly') => {
     setError(null);
     
-    if (!stripeConfigured) {
-      setError('Payment processing is not currently available. Please check back later or contact support.');
-      return;
-    }
+    const checkoutUrl = getLemonSqueezyCheckoutUrl(planType);
     
-    if (!priceId) {
-      setError('Price ID not configured. Please set up Stripe products first.');
+    if (!checkoutUrl) {
+      setError(`LemonSqueezy checkout URL for ${planType} plan is not configured. Please contact support.`);
       return;
     }
 
-    setLoading(priceId);
-    try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ priceId, planType: 'subscription' }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (error: any) {
-      setError(error.message || 'Failed to start checkout. Please try again.');
-    } finally {
-      setLoading(null);
-    }
+    // Redirect to LemonSqueezy hosted checkout
+    // LemonSqueezy will redirect back to /success?license_key=... after payment
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const successUrl = `${baseUrl}/success`;
+    const checkoutUrlWithRedirect = `${checkoutUrl}${checkoutUrl.includes('?') ? '&' : '?'}checkout[success_url]=${encodeURIComponent(successUrl)}`;
+    
+    window.location.href = checkoutUrlWithRedirect;
   };
 
   return (
@@ -82,29 +61,6 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {!stripeConfigured && (
-          <div className="max-w-4xl mx-auto mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <svg
-                className="h-5 w-5 text-yellow-500 mt-0.5 mr-3"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-yellow-800">Payment Processing Unavailable</h3>
-                <p className="mt-1 text-sm text-yellow-700">
-                  Paid subscriptions are currently unavailable. The free tier is fully functional - you can convert files up to 5MB and 10,000 rows.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="max-w-4xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -177,12 +133,10 @@ export default function PricingPage() {
           </div>
 
           {/* Paid Tier - Annual (Highlighted) */}
-          <div className={`rounded-lg border-2 p-8 relative ${stripeConfigured ? 'bg-blue-50 border-blue-500' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
-            {stripeConfigured && (
-              <div className="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 rounded-bl-lg text-sm font-medium">
-                Best Value
-              </div>
-            )}
+          <div className="rounded-lg border-2 p-8 relative bg-blue-50 border-blue-500">
+            <div className="absolute top-0 right-0 bg-blue-500 text-white px-4 py-1 rounded-bl-lg text-sm font-medium">
+              Best Value
+            </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro (Annual)</h3>
             <div className="mb-6">
               <span className="text-4xl font-bold text-gray-900">₹1,749</span>
@@ -216,18 +170,17 @@ export default function PricingPage() {
               </li>
             </ul>
             <button
-              onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID || '')}
-              disabled={loading !== null}
-              className="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleCheckout('annual')}
+              className="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700"
             >
-              {loading ? 'Loading...' : 'Subscribe (Annual)'}
+              Subscribe (Annual)
             </button>
           </div>
         </div>
 
         {/* Monthly Option */}
         <div className="max-w-md mx-auto mt-8">
-          <div className={`rounded-lg border p-8 ${stripeConfigured ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-75'}`}>
+          <div className="rounded-lg border p-8 bg-white border-gray-200">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro (Monthly)</h3>
             <div className="mb-6">
               <span className="text-4xl font-bold text-gray-900">₹449</span>
@@ -235,11 +188,10 @@ export default function PricingPage() {
             </div>
             <p className="text-gray-600 mb-6">Same features as annual plan, billed monthly</p>
             <button
-              onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || '')}
-              disabled={loading !== null || !stripeConfigured}
-              className="w-full px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleCheckout('monthly')}
+              className="w-full px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
             >
-              {loading ? 'Loading...' : stripeConfigured ? 'Subscribe (Monthly)' : 'Coming Soon'}
+              Subscribe (Monthly)
             </button>
           </div>
         </div>

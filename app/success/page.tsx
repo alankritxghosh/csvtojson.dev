@@ -6,51 +6,24 @@ import Link from 'next/link';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
-  const [token, setToken] = useState<string | null>(null);
+  // LemonSqueezy redirects with license_key in query params
+  const licenseKey = searchParams.get('license_key') || searchParams.get('licenseKey');
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    async function generateToken() {
-      if (!sessionId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/generate-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ sessionId }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.token) {
-          // Store in localStorage
-          localStorage.setItem('licenseToken', data.token);
-          setToken(data.token);
-        } else {
-          console.error('Failed to generate token:', data.error);
-        }
-      } catch (error) {
-        console.error('Error generating token:', error);
-      } finally {
-        setLoading(false);
-      }
+    if (licenseKey && typeof window !== 'undefined') {
+      // Store license key in localStorage
+      localStorage.setItem('licenseKey', licenseKey);
+      setSaved(true);
     }
-
-    generateToken();
-  }, [sessionId]);
+  }, [licenseKey]);
 
   const handleCopy = async () => {
-    if (!token) return;
+    if (!licenseKey) return;
     
     try {
-      await navigator.clipboard.writeText(token);
+      await navigator.clipboard.writeText(licenseKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -86,43 +59,43 @@ function SuccessContent() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Payment Successful!</h1>
-          {loading ? (
-            <div className="mb-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Generating your license token...</p>
-            </div>
+          {licenseKey ? (
+            <>
+              {saved && (
+                <p className="text-gray-600 mb-8">
+                  Thank you for subscribing. Your license key has been saved to your browser.
+                </p>
+              )}
+              <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">Your License Key</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  This license key has been automatically saved to your browser. You can also copy it manually:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-white border border-gray-300 rounded px-4 py-2 text-sm font-mono break-all">
+                    {licenseKey}
+                  </code>
+                  <button
+                    onClick={handleCopy}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </>
           ) : (
             <p className="text-gray-600 mb-8">
-              Thank you for subscribing. Your license token has been generated and saved.
+              Thank you for subscribing! If you have a license key, please add it to your account settings.
             </p>
-          )}
-
-          {token && (
-            <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Your License Token</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                This token has been automatically saved to your browser. You can also copy it manually:
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-white border border-gray-300 rounded px-4 py-2 text-sm font-mono break-all">
-                  {token}
-                </code>
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700"
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </div>
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-left">
             <h3 className="font-semibold text-blue-900 mb-2">What&apos;s Next?</h3>
             <ul className="text-sm text-blue-800 space-y-2">
-              <li>• Your license token is automatically saved in your browser</li>
+              <li>• Your license key is automatically saved in your browser</li>
               <li>• You can now convert larger CSV files (up to 50MB, 1M rows)</li>
-              <li>• The token will be sent automatically with each conversion request</li>
+              <li>• The license key will be sent automatically with each conversion request</li>
               <li>• Your subscription is active for 1 year</li>
             </ul>
           </div>

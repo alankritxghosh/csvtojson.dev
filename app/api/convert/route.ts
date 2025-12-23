@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseCSV, RowLimitExceededError, ColumnLimitExceededError, TimeoutExceededError } from '@/lib/csv-parser';
 import { validateFile, ValidationError } from '@/lib/validation';
 import { getLimitsForTier, applyHardLimits } from '@/lib/limits';
-import { verifyLicenseToken } from '@/lib/stripe';
-import { checkTokenAbuse } from '@/lib/token-abuse';
+import { validateLicenseKey } from '@/lib/stripe';
 import { ConversionOptions } from '@/types';
 
 // CRITICAL: MUST use Node runtime, NOT Edge
@@ -29,7 +28,7 @@ export async function POST(request: NextRequest) {
     const emptyAsNull = emptyAsNullRaw === 'true';
     const prettyPrint = prettyPrintRaw === 'true';
     
-    const licenseToken = formData.get('licenseToken') as string | null;
+    const licenseKey = formData.get('licenseKey') as string | null;
 
     // Validate file exists
     if (!file) {
@@ -43,29 +42,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine tier based on license token
+    // Determine tier based on license key
     let tier: 'free' | 'paid' = 'free';
-    if (licenseToken) {
-      const tokenData = verifyLicenseToken(licenseToken);
-      if (tokenData && tokenData.tier === 'paid') {
+    if (licenseKey) {
+      // SECURITY: Validate license key format to prevent arbitrary string bypass
+      // Format validation checks for UUID or "ls_" prefix patterns
+      // NOTE: This is format validation only - server-side verification should be added for production
+      if (validateLicenseKey(licenseKey)) {
         tier = 'paid';
-        
-        // Check token abuse
-        const userAgent = request.headers.get('user-agent') || undefined;
-        const acceptLanguage = request.headers.get('accept-language') || undefined;
-        const abuseCheck = checkTokenAbuse(licenseToken, userAgent, acceptLanguage);
-        
-        if (!abuseCheck.allowed) {
-          return NextResponse.json(
-            { 
-              success: false, 
-              error: abuseCheck.reason || 'Rate limit exceeded',
-              errorCode: 'RATE_LIMIT_EXCEEDED'
-            },
-            { status: 429 }
-          );
-        }
       }
+      // If license key format is invalid, tier remains 'free' (no error, just no upgrade)
     }
 
     // Get limits for tier
@@ -99,6 +85,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 });
     }
 
+    // CRITICAL: Convert File to text string BEFORE parsing
+    // PapaParse in Node.js needs string or stream, not File object
+    // Converting once ensures deterministic parsing and prevents stream consumption issues
+    const csvText = await file.text();
+
     // Parse CSV with options
     const options: ConversionOptions = {
       hasHeader,
@@ -108,7 +99,7 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      const result = await parseCSV(file, options, limits);
+      const result = await parseCSV(csvText, options, limits);
 
       // Generate JSON output
       let jsonOutput: string;

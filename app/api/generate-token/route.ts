@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateLicenseToken, isStripeConfigured, getStripe } from '@/lib/stripe';
+// TOKEN GENERATION DISABLED - License keys come from LemonSqueezy, not generated server-side
+// import { generateLicenseToken, isStripeConfigured, getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // Token generation endpoint is disabled - license keys come from LemonSqueezy
+  return NextResponse.json(
+    { error: 'Token generation is disabled. License keys are provided by LemonSqueezy after purchase.' },
+    { status: 503 }
+  );
+
+  /* STRIPE TOKEN GENERATION CODE COMMENTED OUT - Keeping for reference
   try {
     if (!isStripeConfigured()) {
       return NextResponse.json(
@@ -55,5 +63,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  */
 }
 

@@ -1,3 +1,7 @@
+// STRIPE CODE DISABLED - Replaced with LemonSqueezy
+// Keeping commented code for reference
+
+/*
 import Stripe from 'stripe';
 import jwt from 'jsonwebtoken';
 import { LicenseToken } from '@/types';
@@ -13,16 +17,10 @@ const stripe = process.env.STRIPE_SECRET_KEY
 // Use a default for development if not set (not secure for production)
 const LICENSE_SECRET = process.env.LICENSE_SECRET || 'dev-secret-key-change-in-production';
 
-/**
- * Check if Stripe is configured
- */
 export function isStripeConfigured(): boolean {
   return stripe !== null && !!process.env.STRIPE_SECRET_KEY;
 }
 
-/**
- * Create a Stripe Checkout session
- */
 export async function createCheckoutSession(
   priceId: string,
   successUrl: string,
@@ -51,9 +49,6 @@ export async function createCheckoutSession(
   return session;
 }
 
-/**
- * Generate a license token (JWT) after successful payment
- */
 export function generateLicenseToken(customerId: string, expiresInDays: number = 365): string {
   const expires = Date.now() + expiresInDays * 24 * 60 * 60 * 1000;
   
@@ -71,9 +66,6 @@ export function generateLicenseToken(customerId: string, expiresInDays: number =
   return token;
 }
 
-/**
- * Verify and decode a license token
- */
 export function verifyLicenseToken(token: string): LicenseToken | null {
   try {
     const decoded = jwt.verify(token, LICENSE_SECRET, {
@@ -91,9 +83,6 @@ export function verifyLicenseToken(token: string): LicenseToken | null {
   }
 }
 
-/**
- * Handle Stripe webhook (for subscription updates, cancellations, etc.)
- */
 export async function handleStripeWebhook(
   payload: string | Buffer,
   signature: string
@@ -112,10 +101,52 @@ export async function handleStripeWebhook(
   return event;
 }
 
-/**
- * Get Stripe instance (for direct access if needed)
- */
 export function getStripe(): Stripe | null {
   return stripe;
+}
+*/
+
+/**
+ * Validate LemonSqueezy license key format
+ * SECURITY: This validates format only - server-side verification should be added for production
+ * 
+ * LemonSqueezy license keys are typically:
+ * - UUIDs (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+ * - Or alphanumeric strings with specific patterns
+ * 
+ * @param key - License key string from LemonSqueezy
+ * @returns true if key format matches expected patterns, false otherwise
+ */
+export function validateLicenseKey(key: string): boolean {
+  if (!key || typeof key !== 'string') {
+    return false;
+  }
+
+  const trimmedKey = key.trim();
+  
+  // Basic sanity check: non-empty string
+  if (trimmedKey.length === 0) {
+    return false;
+  }
+
+  // Validate UUID format (most common LemonSqueezy license key format)
+  // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (32 hex chars, 4 hyphens)
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidPattern.test(trimmedKey)) {
+    return true;
+  }
+
+  // Validate "ls_" prefix format (alternative LemonSqueezy format)
+  // Format: ls_ followed by alphanumeric characters
+  if (trimmedKey.startsWith('ls_') && trimmedKey.length > 3) {
+    const suffix = trimmedKey.substring(3);
+    // Allow alphanumeric and hyphens in suffix
+    if (/^[a-zA-Z0-9-]+$/.test(suffix) && suffix.length >= 8) {
+      return true;
+    }
+  }
+
+  // Reject any other format - prevents arbitrary string bypass
+  return false;
 }
 

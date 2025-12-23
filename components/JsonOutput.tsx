@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -10,16 +10,62 @@ interface JsonOutputProps {
   loading?: boolean;
 }
 
+const PREVIEW_ROW_LIMIT = 100;
+
 export default function JsonOutput({ json, error, loading }: JsonOutputProps) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Limit preview to first 100 rows, but keep full JSON for download
+  const { previewJson, isTruncated, totalRows } = useMemo(() => {
+    if (!json) {
+      return { previewJson: null, isTruncated: false, totalRows: 0 };
+    }
+
+    try {
+      const parsed = JSON.parse(json);
+      
+      // Detect if original JSON is pretty-printed or minified
+      // Pretty-printed JSON contains newlines, minified JSON is typically on one line
+      const isPrettyPrinted = json.includes('\n');
+      
+      // Only limit arrays (not objects)
+      if (Array.isArray(parsed) && parsed.length > PREVIEW_ROW_LIMIT) {
+        const preview = parsed.slice(0, PREVIEW_ROW_LIMIT);
+        // Preserve original formatting style: pretty-print if original was pretty-printed, minify if original was minified
+        const previewJsonString = isPrettyPrinted 
+          ? JSON.stringify(preview, null, 2)
+          : JSON.stringify(preview);
+        return {
+          previewJson: previewJsonString,
+          isTruncated: true,
+          totalRows: parsed.length,
+        };
+      }
+      
+      // Not an array or within limit - show full JSON
+      return {
+        previewJson: json,
+        isTruncated: false,
+        totalRows: Array.isArray(parsed) ? parsed.length : 0,
+      };
+    } catch (e) {
+      // If parsing fails, just show the original JSON
+      return {
+        previewJson: json,
+        isTruncated: false,
+        totalRows: 0,
+      };
+    }
+  }, [json]);
 
   const handleCopy = async () => {
     if (!json) return;
     
     setCopyError(null);
     try {
+      // Copy full JSON, not preview
       await navigator.clipboard.writeText(json);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -33,6 +79,7 @@ export default function JsonOutput({ json, error, loading }: JsonOutputProps) {
 
     setDownloadError(null);
     try {
+      // Download full JSON, not preview
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -95,7 +142,14 @@ export default function JsonOutput({ json, error, loading }: JsonOutputProps) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">JSON Output</h3>
+        <div>
+          <h3 className="text-lg font-semibold">JSON Output</h3>
+          {isTruncated && (
+            <p className="text-sm text-gray-600 mt-1">
+              Showing first {PREVIEW_ROW_LIMIT} of {totalRows.toLocaleString()} rows. Download for full JSON.
+            </p>
+          )}
+        </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
             <button
@@ -131,7 +185,7 @@ export default function JsonOutput({ json, error, loading }: JsonOutputProps) {
             overflow: 'auto',
           }}
         >
-          {json}
+          {previewJson || ''}
         </SyntaxHighlighter>
       </div>
     </div>

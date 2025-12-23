@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, isStripeConfigured } from '@/lib/stripe';
+// STRIPE CHECKOUT DISABLED - Replaced with LemonSqueezy
+// import { createCheckoutSession, isStripeConfigured } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // Stripe checkout is disabled - using LemonSqueezy hosted checkout instead
+  return NextResponse.json(
+    { error: 'Stripe checkout is disabled. Please use LemonSqueezy checkout links.' },
+    { status: 503 }
+  );
+
+  /* STRIPE CODE COMMENTED OUT - Keeping for reference
   try {
     if (!isStripeConfigured()) {
       return NextResponse.json(
@@ -39,5 +47,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  */
 }
 

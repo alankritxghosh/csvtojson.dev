@@ -23,22 +23,14 @@ export default function Home() {
   const [fileSize, setFileSize] = useState<number | undefined>();
   const [tier, setTier] = useState<'free' | 'paid'>('free');
 
-  // Check for license token in localStorage
+  // Check for license key in localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('licenseToken');
-      if (token) {
-        // Verify token by checking if it exists and is not expired
-        // In a real implementation, you'd verify the JWT structure
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload.tier === 'paid' && payload.expires > Date.now()) {
-            setTier('paid');
-          }
-        } catch (e) {
-          // Invalid token, remove it
-          localStorage.removeItem('licenseToken');
-        }
+      const licenseKey = localStorage.getItem('licenseKey');
+      if (licenseKey && licenseKey.trim().length > 0) {
+        // For MVP: Simple check - if license key exists, set tier to paid
+        // No JWT parsing needed - license keys come from LemonSqueezy
+        setTier('paid');
       }
     }
   }, []);
@@ -97,11 +89,11 @@ export default function Home() {
       formData.append('emptyAsNull', String(options.emptyAsNull));
       formData.append('prettyPrint', String(options.prettyPrint));
 
-      // Add license token if available
+      // Add license key if available
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('licenseToken');
-        if (token) {
-          formData.append('licenseToken', token);
+        const licenseKey = localStorage.getItem('licenseKey');
+        if (licenseKey) {
+          formData.append('licenseKey', licenseKey);
         }
       }
 
